@@ -1,8 +1,10 @@
 use std::env;
 use std::fs::File;
-use std::io::{Write, BufReader, BufRead, Error};
+use std::io::{Write, BufReader, BufRead};
 use walkdir::WalkDir;
-//use rayon::prelude::*;
+use rayon::prelude::ParallelIterator;
+use rayon::iter::ParallelBridge;
+use regex::Regex;
 
 
 fn cache(path: &str, cachepath: &str) {
@@ -14,12 +16,25 @@ fn cache(path: &str, cachepath: &str) {
         .filter_map(|e| e.ok()) {
         write!(output, "{}\n", entry.path().display()).unwrap();
     }
- 
+}
+
+fn find(path: &str, pattern: &str) -> Vec<()> {
+    let pattern = Regex::new(format!(r#"{}"#, regex::escape(pattern)).as_str()).unwrap();
+    let input = File::open(path).unwrap();
+    let buffered = BufReader::new(input);
+    buffered.lines()
+        .into_iter()
+        .par_bridge()
+        .map(|line| line.unwrap())
+        .filter(|line| pattern.is_match(line))
+        .map(|m| println!("{}", m))
+        .collect::<Vec<_>>()
 }
 
 fn main() {
 
     let args: Vec<String> = env::args().collect();
-    cache(&args[1], &args[2]);
-    println!("Cached.")
+    
+    find(&args[2], &args[1]);
+
 }
