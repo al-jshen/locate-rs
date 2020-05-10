@@ -4,8 +4,8 @@ use std::io::{Write, BufReader, BufRead};
 use std::path::Path;
 use std::ffi::OsStr;
 use walkdir::WalkDir;
-//use rayon::prelude::ParallelIterator;
-//use rayon::iter::ParallelBridge;
+use rayon::prelude::ParallelIterator;
+use rayon::iter::ParallelBridge;
 use regex::Regex;
 use clap::{App, Arg, ArgMatches, crate_authors, crate_version};
 
@@ -23,17 +23,25 @@ fn cache(cachepath: &str, filters: &Vec<&str>) {
     }
 }
 
-fn find(path: &str, pattern: &str) -> Vec<()> {
+fn find(path: &str, pattern: &str, parallel: bool) -> Vec<()> {
     let pattern = Regex::new(format!(r#"{}"#, regex::escape(pattern)).as_str()).unwrap();
     let input = File::open(path).unwrap();
     let buffered = BufReader::new(input);
-    buffered.lines()
-//        .into_iter()
-//        .par_bridge()
-        .map(|line| line.unwrap())
-        .filter(|line| pattern.is_match(line))
-        .map(|m| println!("{}", m))
-        .collect::<Vec<_>>()
+    if parallel {
+        buffered.lines()
+            .into_iter()
+            .par_bridge()
+            .map(|line| line.unwrap())
+            .filter(|line| pattern.is_match(line))
+            .map(|m| println!("{}", m))
+            .collect::<Vec<_>>()
+    } else {
+        buffered.lines()
+            .map(|line| line.unwrap())
+            .filter(|line| pattern.is_match(line))
+            .map(|m| println!("{}", m))
+            .collect::<Vec<_>>()
+    }
 }
 
 fn main() {
@@ -53,12 +61,14 @@ fn main() {
             .short("s")
             .long("s")
             .takes_value(true))
+        .arg(Arg::with_name("p")
+            .help("parallel search")
+            .short("p"))
         .get_matches();
 
 
-
     if let Some(pattern) = options.value_of("search") {
-        find("/tmp/locate-rs.cache", pattern);
+        find("/tmp/locate-rs.cache", pattern, options.is_present("p"));
     }
 
     if options.is_present("cache") {

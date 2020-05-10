@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 walkdir = "*"
-#rayon = "*"
+rayon = "*"
 regex = "*"
 clap = "*"
