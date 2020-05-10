@@ -2,22 +2,22 @@ use std::env;
 use std::fs::{File, read_to_string};
 use std::io::{Write, BufReader, BufRead};
 use std::path::Path;
+use std::ffi::OsStr;
 use walkdir::WalkDir;
 //use rayon::prelude::ParallelIterator;
 //use rayon::iter::ParallelBridge;
 use regex::Regex;
 use clap::{App, Arg, ArgMatches, crate_authors, crate_version};
 
-
 fn cache(cachepath: &str, filters: &Vec<&str>) {
 
-    let pathFilters = filters.into_iter().map(|f| Path::new(f)).collect::<Vec<_>>();
+    let file_filters = filters[0].trim().split(" ").into_iter().map(|f| OsStr::new(f)).collect::<Vec<_>>();
+    let path_filters = filters[1].trim().split(" ").into_iter().map(|f| Path::new(f)).collect::<Vec<_>>();
 
     let mut output = File::create(cachepath).unwrap();
-
-    for entry in WalkDir::new("/home").follow_links(true)
+    for entry in WalkDir::new("/").follow_links(true)
         .into_iter()
-        .filter_entry(|d| !pathFilters.contains(&d.path()))
+        .filter_entry(|d| (&d.path() == &Path::new("/")) || (!file_filters.contains(&d.path().file_name().unwrap()) && !path_filters.contains(&d.path().parent().unwrap())))
         .filter_map(|e| e.ok()) {
         write!(output, "{}\n", entry.path().display()).unwrap();
     }
@@ -39,8 +39,7 @@ fn find(path: &str, pattern: &str) -> Vec<()> {
 fn main() {
 
     let cfg_file = read_to_string("/etc/locate-rs.conf").unwrap();
-
-
+    
     let options: ArgMatches = App::new("locate clone built with Rust")
         .author(crate_authors!())
         .version(crate_version!())
@@ -63,7 +62,7 @@ fn main() {
     }
 
     if options.is_present("cache") {
-        let filters = cfg_file.trim().split(" ").collect::<Vec<_>>();
+        let filters = cfg_file.trim().split("\n").collect::<Vec<_>>();
         cache("/tmp/locate-rs.cache", &filters);
     }
 
