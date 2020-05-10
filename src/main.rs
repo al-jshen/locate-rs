@@ -62,7 +62,7 @@ fn main() {
             .long("s")
             .takes_value(true))
         .arg(Arg::with_name("p")
-            .help("parallel search")
+            .help("parallel search (usually the overhead is not worth it)")
             .short("p"))
         .get_matches();
 
