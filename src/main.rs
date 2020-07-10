@@ -40,14 +40,13 @@ fn main() {
         .version(crate_version!())
         .about("Performs fast search of files using regex.")
         .arg(Arg::with_name("cache")
-            .help("path of cache file")
+            .help("regenerate cache at /tmp/rlocate-rs.cache using config options from /etc/locate-rs.conf")
             .short("c")
             .long("c"))
         .arg(Arg::with_name("search")
-            .help("pattern")
-            .short("s")
-            .long("s")
-            .takes_value(true))
+            .help("regex pattern to search for")
+            .index(1)
+            .conflicts_with("cache"))
         .get_matches();
 
 
@@ -58,6 +57,5 @@ fn main() {
     if options.is_present("cache") {
         let filters = cfg_file.trim().split("\n").collect::<Vec<_>>();
         cache("/tmp/locate-rs.cache", &filters);
-    }
-
+    } 
 }
