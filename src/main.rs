@@ -4,8 +4,6 @@ use std::io::{Write, BufReader, BufRead};
 use std::path::Path;
 use std::ffi::OsStr;
 use walkdir::WalkDir;
-use rayon::prelude::ParallelIterator;
-use rayon::iter::ParallelBridge;
 use regex::Regex;
 use clap::{App, Arg, ArgMatches, crate_authors, crate_version};
 
@@ -23,25 +21,14 @@ fn cache(cachepath: &str, filters: &Vec<&str>) {
     }
 }
 
-fn find(path: &str, pattern: &str, parallel: bool) -> Vec<()> {
-    let pattern = Regex::new(format!(r#"{}"#, regex::escape(pattern)).as_str()).unwrap();
+fn find(path: &str, pattern: &str) {
+    let regexpattern = Regex::new(pattern).unwrap();
     let input = File::open(path).unwrap();
     let buffered = BufReader::new(input);
-    if parallel {
-        buffered.lines()
-            .into_iter()
-            .par_bridge()
-            .map(|line| line.unwrap())
-            .filter(|line| pattern.is_match(line))
-            .map(|m| println!("{}", m))
-            .collect::<Vec<_>>()
-    } else {
-        buffered.lines()
-            .map(|line| line.unwrap())
-            .filter(|line| pattern.is_match(line))
-            .map(|m| println!("{}", m))
-            .collect::<Vec<_>>()
-    }
+    buffered.lines()
+        .map(|line| line.unwrap())
+        .filter(|line| regexpattern.is_match(line))
+        .for_each(|m| println!("{}", m));
 }
 
 fn main() {
@@ -51,7 +38,7 @@ fn main() {
     let options: ArgMatches = App::new("locate clone built with Rust")
         .author(crate_authors!())
         .version(crate_version!())
-        .about("Performs parallelized search for files using regex.")
+        .about("Performs fast search of files using regex.")
         .arg(Arg::with_name("cache")
             .help("path of cache file")
             .short("c")
@@ -61,14 +48,11 @@ fn main() {
             .short("s")
             .long("s")
             .takes_value(true))
-        .arg(Arg::with_name("p")
-            .help("parallel search (usually the overhead is not worth it)")
-            .short("p"))
         .get_matches();
 
 
     if let Some(pattern) = options.value_of("search") {
-        find("/tmp/locate-rs.cache", pattern, options.is_present("p"));
+        find("/tmp/locate-rs.cache", pattern);
     }
 
     if options.is_present("cache") {
