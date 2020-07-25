@@ -6,6 +6,8 @@ use std::fs::{read_to_string, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use walkdir::WalkDir;
+use dirs::home_dir;
+// use jwalk::{WalkDir};
 
 fn cache(cachepath: &str, filters: &[&str]) {
     let file_filters = filters[0]
@@ -53,7 +55,7 @@ fn main() {
         .version(crate_version!())
         .about("Performs fast search of files using regex.")
         .arg(Arg::with_name("cache")
-            .help("regenerate cache at /tmp/rlocate-rs.cache using config options from /etc/locate-rs.conf")
+            .help("regenerate cache at '~/.cache/rlocate-rs.cache' using config options from /etc/locate-rs.conf")
             .short("c")
             .long("c"))
         .arg(Arg::with_name("search")
@@ -63,11 +65,11 @@ fn main() {
         .get_matches();
 
     if let Some(pattern) = options.value_of("search") {
-        find("/tmp/locate-rs.cache", pattern);
+        find(&[home_dir().unwrap().to_str().unwrap(), "/.cache/locate-rs.cache"].join(""), pattern);
     }
 
     if options.is_present("cache") {
         let filters = cfg_file.trim().split('\n').collect::<Vec<_>>();
-        cache("/tmp/locate-rs.cache", &filters);
+        cache(&[home_dir().unwrap().to_str().unwrap(), "/.cache/locate-rs.cache"].join(""), &filters);
     }
 }
